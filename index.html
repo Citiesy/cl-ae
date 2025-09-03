@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI驱动的文字冒险 v4.3</title>
+    
+    <!-- 引入字体和图标 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- 引入Markdown解析和净化库 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
+
+    <style>
+        /* --- 主题变量定义 --- */
+        :root {
+            --font-main: 'Noto Sans SC', sans-serif;
+            --font-title: 'ZCOOL KuaiLe', sans-serif;
+            --border-radius-small: 5px;
+            --border-radius-large: 20px;
+            --transition-speed: 0.3s;
+        }
+
+        /* --- 暗黑主题 (默认) --- */
+        body.theme-dark {
+            --bg-color: #1a1a1a;
+            --surface-color: #2c2c2c;
+            --primary-text-color: #e0e0e0;
+            --secondary-text-color: #a0a0a0;
+            --accent-color: #00aaff;
+            --hp-color: #e74c3c;
+            --mp-color: #3498db;
+            --xp-color: #f1c40f;
+            --border-color: #444;
+            --success-color: #2ecc71;
+            --error-color: var(--hp-color);
+            --bg-image: none;
+            --button-icon-color: #ffffff;
+            --code-bg-color: #3a3a3a;
+            --tab-active-bg: var(--accent-color);
+            --tab-active-text: #fff;
+        }
+
+        /* --- 牛皮纸亮色主题 --- */
+        body.theme-light {
+            --bg-color: #fdf6e3;
+            --surface-color: #f5efdc;
+            --primary-text-color: #584b3a;
+            --secondary-text-color: #8a7a68;
+            --accent-color: #268bd2;
+            --hp-color: #dc322f;
+            --mp-color: #268bd2;
+            --xp-color: #b58900;
+            --border-color: #d3cbbd;
+            --success-color: #859900;
+            --error-color: var(--hp-color);
+            --bg-image: url('https://www.transparenttextures.com/patterns/old-paper.png');
+            --button-icon-color: #fdf6e3;
+            --code-bg-color: #eaddc7;
+            --tab-active-bg: var(--accent-color);
+            --tab-active-text: #fff;
+        }
+
+        /* --- 鸢尾紫主题 (新配色) --- */
+        body.theme-iris-purple {
+            --bg-color: #29242e;
+            --surface-color: #403a47;
+            --primary-text-color: #f2e9ff;
+            --secondary-text-color: #a093b3;
+            --accent-color: #a972ff;
+            --hp-color: #ff5c8a;
+            --mp-color: #49d4c9;
+            --xp-color: #ffd76a;
+            --border-color: #4d4554;
+            --success-color: #50fa7b;
+            --error-color: #ff5c8a;
+            --bg-image: none;
+            --button-icon-color: #f2e9ff;
+            --code-bg-color: #352f3b;
+            --tab-active-bg: var(--accent-color);
+            --tab-active-text: #fff;
+        }
+
+        /* --- 草地绿主题 --- */
+        body.theme-grass-green {
+            --bg-color: #2e4636;
+            --surface-color: #4a634e;
+            --primary-text-color: #f0ead6;
+            --secondary-text-color: #b0a68d;
+            --accent-color: #8bc34a;
+            --hp-color: #ef5350;
+            --mp-color: #64b5f6;
+            --xp-color: #ffca28;
+            --border-color: #6b826f;
+            --success-color: #aed581;
+            --error-color: #ef5350;
+            --bg-image: none;
+            --button-icon-color: #f0ead6;
+            --code-bg-color: #3a513f;
+            --tab-active-bg: var(--accent-color);
+            --tab-active-text: #fff;
+        }
+
+        /* --- 全局样式 --- */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { width: 100%; height: 100%; font-family: var(--font-main); background-color: var(--bg-color); background-image: var(--bg-image); color: var(--primary-text-color); font-size: 16px; overflow: hidden; transition: background-color var(--transition-speed), color var(--transition-speed); }
+
+        /* --- 主游戏容器 --- */
+        #game-container { display: flex; flex-direction: column; height: 100%; width: 100%; }
+
+        /* --- 游戏日志区域 --- */
+        #game-log { flex-grow: 1; overflow-y: auto; padding: 15px; border-bottom: 1px solid var(--border-color); scroll-behavior: smooth; }
+        .log-entry { margin-bottom: 12px; line-height: 1.6; }
+        .log-story { color: var(--primary-text-color); }
+        .log-system { color: var(--xp-color); font-style: italic; }
+        .log-player { color: var(--accent-color); font-weight: bold; }
+        .log-item { color: #9b59b6; }
+        .log-map { color: var(--success-color); }
+        .log-module { color: #e67e22; }
+        .log-error { color: var(--error-color); font-weight: bold; }
+        .log-ai-thinking::after { content: '...'; animation: thinking 1.5s infinite; }
+        @keyframes thinking { 0%, 100% { content: '.'; } 33% { content: '..'; } 66% { content: '...'; } }
+
+        /* Markdown 样式 */
+        .log-entry p:last-child, #item-details-description p:last-child, #area-details-description p:last-child { margin-bottom: 0; }
+        .log-entry strong, #item-details-description strong, #area-details-description strong { font-weight: bold; color: var(--accent-color); }
+        .log-entry em, #item-details-description em, #area-details-description em { font-style: italic; }
+        .log-entry code, #item-details-description code, #area-details-description code { background-color: var(--code-bg-color); padding: 2px 5px; border-radius: var(--border-radius-small); font-family: monospace; }
+        .log-entry blockquote, #item-details-description blockquote, #area-details-description blockquote { border-left: 3px solid var(--border-color); padding-left: 10px; margin-left: 5px; color: var(--secondary-text-color); }
+        .log-entry a, #item-details-description a, #area-details-description a { color: var(--accent-color); text-decoration: underline; }
+
+        /* --- 玩家状态栏 --- */
+        #player-stats { padding: 10px 15px; background-color: var(--surface-color); border-bottom: 1px solid var(--border-color); transition: background-color var(--transition-speed); flex-shrink: 0; }
+        .stat-bar-container { display: flex; align-items: center; margin-bottom: 8px; }
+        .stat-bar-container i { margin-right: 8px; width: 20px; text-align: center; }
+        .stat-bar { flex-grow: 1; height: 18px; background-color: rgba(0,0,0,0.2); border-radius: 9px; overflow: hidden; position: relative; }
+        .stat-bar-fill { height: 100%; border-radius: 9px; transition: width 0.5s ease; }
+        .stat-bar-fill.hp { background-color: var(--hp-color); }
+        .stat-bar-fill.mp { background-color: var(--mp-color); }
+        .stat-bar-text { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-size: 12px; font-weight: bold; color: white; text-shadow: 1px 1px 2px rgba(0,0,0,0.7); }
+        #attributes { display: flex; justify-content: space-around; font-size: 14px; margin-top: 10px; }
+        #attributes span { display: flex; align-items: center; }
+        #attributes i { margin-right: 5px; color: var(--secondary-text-color); }
+
+        /* --- 页签信息面板 --- */
+        #info-panels-container { background-color: var(--bg-color); border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
+        #info-panel-tabs { display: flex; border-bottom: 1px solid var(--border-color); }
+        .tab-button { flex-grow: 1; padding: 10px; background-color: transparent; border: none; border-bottom: 3px solid transparent; color: var(--secondary-text-color); font-family: var(--font-main); font-size: 14px; font-weight: bold; cursor: pointer; transition: all var(--transition-speed); }
+        .tab-button.active { color: var(--tab-active-text); background-color: var(--tab-active-bg); }
+        .info-panel-content { display: none; padding: 10px 15px; min-height: 60px; }
+        .info-panel-content.active { display: block; }
+        .info-panel-list { display: flex; flex-wrap: wrap; gap: 8px; }
+        .info-tag { background-color: var(--surface-color); padding: 5px 10px; border-radius: 15px; font-size: 14px; cursor: pointer; transition: background-color 0.2s; border: 1px solid var(--border-color); user-select: none; -webkit-user-select: none; }
+        .info-tag:hover { background-color: color-mix(in srgb, var(--surface-color) 80%, #000); }
+        .area-tag { border-color: var(--success-color); color: var(--success-color); }
+
+        /* --- 输入与动作区域 --- */
+        #action-bar { display: flex; padding: 10px; background-color: var(--surface-color); transition: background-color var(--transition-speed); gap: 10px; flex-shrink: 0; }
+        #command-input { flex-grow: 1; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: var(--border-radius-large); padding: 10px 15px; color: var(--primary-text-color); font-family: var(--font-main); font-size: 16px; transition: all var(--transition-speed); }
+        #command-input:focus { outline: none; border-color: var(--accent-color); }
+        
+        .action-button { border: none; color: var(--button-icon-color); border-radius: 50%; width: 44px; height: 44px; font-size: 18px; cursor: pointer; transition: background-color 0.2s, filter 0.2s; flex-shrink: 0; }
+        .action-button:disabled { background-color: #555 !important; cursor: not-allowed; filter: grayscale(1); }
+        .action-button:hover { filter: brightness(1.2); }
+        #send-button { background-color: var(--accent-color); }
+        .secondary-button { background-color: var(--secondary-text-color); }
+        body.theme-light .action-button i { text-shadow: 1px 1px 2px rgba(0,0,0,0.3); }
+
+        /* --- 通用模态框样式 --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); display: none; justify-content: center; align-items: center; z-index: 1000; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .modal-content { background-color: var(--surface-color); padding: 20px; border-radius: 10px; width: 95%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+        .modal-content h2 { margin-bottom: 20px; text-align: center; font-family: var(--font-title); }
+        .modal-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        .modal-buttons button { padding: 10px 20px; border: none; border-radius: var(--border-radius-small); cursor: pointer; font-weight: bold; }
+        .modal-buttons .confirm-btn { background-color: var(--accent-color); color: var(--button-icon-color); }
+        .modal-buttons .cancel-btn { background-color: var(--secondary-text-color); color: var(--button-icon-color); }
+        
+        /* --- AI 设置弹窗 --- */
+        fieldset { border: 1px solid var(--border-color); border-radius: var(--border-radius-small); padding: 15px; margin-bottom: 20px; }
+        legend { padding: 0 10px; font-weight: bold; color: var(--accent-color); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; color: var(--secondary-text-color); font-size: 14px; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: var(--border-radius-small); color: var(--primary-text-color); font-family: var(--font-main); }
+        .checkbox-group { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+        .checkbox-group label { margin-bottom: 0; }
+        .config-management { display: flex; gap: 10px; align-items: center; }
+        .config-management select { flex-grow: 1; }
+        .config-management button { padding: 10px; background-color: var(--accent-color); color: var(--button-icon-color); border: none; border-radius: var(--border-radius-small); cursor: pointer; }
+        .config-management button.delete { background-color: var(--error-color); }
+        .model-group { display: flex; align-items: center; gap: 10px; }
+        #fetch-models-button { padding: 10px; background-color: var(--accent-color); color: var(--button-icon-color); border: none; border-radius: var(--border-radius-small); cursor: pointer; }
+        #fetch-models-button:disabled { background-color: var(--secondary-text-color); cursor: not-allowed; }
+        #model-fetch-status { font-size: 12px; font-style: italic; flex-grow: 1; }
+        #new-game-button { width:100%; padding:10px; background-color:var(--error-color); color:var(--button-icon-color); border:none; border-radius:var(--border-radius-small); cursor:pointer; font-weight: bold; }
+
+        /* --- 道具/区域详情弹窗 --- */
+        #item-details-attributes { margin-bottom: 15px; }
+        #item-details-attributes span { display: inline-block; background-color: var(--bg-color); padding: 5px 10px; border-radius: 15px; margin-right: 8px; margin-bottom: 8px; font-size: 14px; }
+        #item-details-description, #area-details-description { line-height: 1.7; }
+
+        /* --- 自定义通知 (Toast) 样式 --- */
+        #notification-toast { position: fixed; top: -100px; left: 50%; transform: translateX(-50%); padding: 12px 25px; border-radius: var(--border-radius-large); color: #fff; font-weight: bold; z-index: 2000; transition: top 0.5s ease-in-out; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        #notification-toast.show { top: 20px; }
+        #notification-toast.success { background-color: var(--success-color); }
+        #notification-toast.error { background-color: var(--error-color); }
+    </style>
+</head>
+<body class="theme-dark">
+
+    <!-- 主游戏界面 -->
+    <div id="game-container">
+        <div id="game-log"></div>
+        <div id="player-stats">
+            <div class="stat-bar-container">
+                <i class="fas fa-heart" style="color: var(--hp-color);"></i>
+                <div class="stat-bar"><div id="hp-bar" class="stat-bar-fill hp"></div><span id="hp-text" class="stat-bar-text"></span></div>
+            </div>
+            <div class="stat-bar-container">
+                <i class="fas fa-bolt" style="color: var(--mp-color);"></i>
+                <div class="stat-bar"><div id="mp-bar" class="stat-bar-fill mp"></div><span id="mp-text" class="stat-bar-text"></span></div>
+            </div>
+            <div id="attributes">
+                <span><i class="fas fa-dumbbell"></i>力量: <span id="str-val"></span></span>
+                <span><i class="fas fa-running"></i>敏捷: <span id="dex-val"></span></span>
+                <span><i class="fas fa-brain"></i>智力: <span id="int-val"></span></span>
+            </div>
+        </div>
+        
+        <div id="info-panels-container">
+            <div id="info-panel-tabs">
+                <button class="tab-button" data-tab="inventory"><i class="fas fa-briefcase"></i> 物品栏</button>
+                <button class="tab-button" data-tab="areas"><i class="fas fa-map-marked-alt"></i> 已发现区域</button>
+            </div>
+            <div id="inventory-panel" class="info-panel-content">
+                <div id="inventory-list" class="info-panel-list"></div>
+            </div>
+            <div id="areas-panel" class="info-panel-content">
+                <div id="area-list" class="info-panel-list"></div>
+            </div>
+        </div>
+
+        <div id="action-bar">
+            <button id="theme-toggle-button" class="action-button secondary-button" title="切换主题"><i class="fas fa-palette"></i></button>
+            <input type="text" id="command-input" placeholder="输入你的行动...">
+            <button id="send-button" class="action-button" title="发送"><i class="fas fa-paper-plane"></i></button>
+            <button id="regenerate-button" class="action-button secondary-button" title="重新生成"><i class="fas fa-sync-alt"></i></button>
+            <button id="settings-button" class="action-button secondary-button" title="设置"><i class="fas fa-cog"></i></button>
+        </div>
+    </div>
+
+    <!-- AI 设置弹窗 -->
+    <div id="settings-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2><i class="fas fa-robot"></i> AI 设置</h2>
+            <fieldset>
+                <legend>配置管理</legend>
+                <div class="form-group config-management">
+                    <select id="config-select"></select>
+                    <button type="button" id="config-new-button" title="新建配置"><i class="fas fa-plus"></i></button>
+                    <button type="button" id="config-delete-button" class="delete" title="删除当前配置"><i class="fas fa-trash-alt"></i></button>
+                </div>
+                 <div class="form-group">
+                    <label for="config-name-input">配置名称</label>
+                    <input type="text" id="config-name-input" placeholder="给这个配置起个名">
+                </div>
+                <button type="button" id="config-save-button" style="width:100%; padding:10px; background-color:var(--success-color); color:var(--button-icon-color); border:none; border-radius:var(--border-radius-small); cursor:pointer;"><i class="fas fa-save"></i> 保存当前配置</button>
+            </fieldset>
+            <fieldset>
+                <legend>API 详情</legend>
+                <div class="form-group">
+                    <label for="ai-url" id="ai-url-label">API 基础 URL</label>
+                    <input type="text" id="ai-url" placeholder="例如: https://api.openai.com">
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="custom-url-checkbox">
+                        <label for="custom-url-checkbox">自定义完整URL</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="ai-key">API 密钥 (可留空)</label>
+                    <input type="password" id="ai-key" placeholder="你的 API Key">
+                </div>
+                <div class="form-group">
+                    <label for="ai-model">模型选择</label>
+                    <div class="model-group">
+                        <select id="ai-model" style="flex-grow: 1;"></select>
+                        <button type="button" id="fetch-models-button" title="从API获取模型列表"><i class="fas fa-sync-alt"></i></button>
+                    </div>
+                    <span id="model-fetch-status"></span>
+                    <input type="text" id="ai-model-custom" placeholder="或在此处输入自定义模型名称" style="margin-top: 8px;">
+                </div>
+            </fieldset>
+            <fieldset>
+                <legend>游戏操作</legend>
+                <button type="button" id="new-game-button"><i class="fas fa-redo"></i> 开启新游戏</button>
+            </fieldset>
+            <div class="modal-buttons">
+                <button id="close-settings-button" class="cancel-btn">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 道具详情弹窗 -->
+    <div id="item-details-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 id="item-details-name"></h2>
+            <div id="item-details-attributes"></div>
+            <hr style="border: none; border-top: 1px solid var(--border-color); margin: 15px 0;">
+            <div id="item-details-description"></div>
+        </div>
+    </div>
+
+    <!-- 区域详情弹窗 -->
+    <div id="area-details-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 id="area-details-name"></h2>
+            <hr style="border: none; border-top: 1px solid var(--border-color); margin: 15px 0;">
+            <div id="area-details-description"></div>
+        </div>
+    </div>
+
+    <!-- 重新生成确认弹窗 -->
+    <div id="regenerate-confirm-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2><i class="fas fa-question-circle"></i> 确认操作</h2>
+            <p>你确定要让AI重新生成上一条回复吗？</p>
+            <div class="checkbox-group">
+                <input type="checkbox" id="dont-ask-regenerate-checkbox">
+                <label for="dont-ask-regenerate-checkbox">不再提醒</label>
+            </div>
+            <div class="modal-buttons">
+                <button id="regenerate-cancel-button" class="cancel-btn">取消</button>
+                <button id="regenerate-confirm-button" class="confirm-btn">确认</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 自定义通知 Toast -->
+    <div id="notification-toast"></div>
+
+    <!-- 内置系统提示词模板 -->
+    <div id="system-prompts" style="display: none;">
+        <template id="prompt-main">
+你是一个世界级的地下城主（DM），正在主持一个文字跑团游戏（TRPG）。你的任务是基于玩家的输入，动态生成引人入胜的剧情、环境描述、NPC互动、怪物和挑战。你必须严格遵守以下格式和规则：**核心规则：** 1. **格式至上**: 你的所有回复都必须使用指定的格式标签。这是强制性的。2. **沉浸感**: 你的描述要生动、形象，充满细节，激发玩家的想象力。3. **一致性**: 保持世界观、角色和剧情的连贯性。记住之前发生过的事情。4. **引导性**: 在描述中巧妙地提供线索，引导玩家进行下一步探索，但不要替玩家做决定。5. **简洁性**: 避免冗长的废话，核心内容要清晰。**输出格式定义 (必须使用):** 1. **剧情**: 主要的故事叙述、环境描述、NPC对话等。 格式: `[剧情]...文字内容...[/剧情]` 示例: `[剧情]你推开沉重的石门，一股混合着尘土与腐朽气味的空气扑面而来。前方是一条幽深的走廊，墙壁上微弱的荧光苔藓是唯一的光源。[/剧情]` 2. **道具**: 当玩家发现或获得新物品时使用。 格式: `[道具:物品名称|属性1:值1|属性2:值2]...物品的描述...[/道具]` - `物品名称` 必须简洁明了。 - `属性` 是可选的，用`|`分隔，格式为`属性名:值`。例如 `攻击力:5`。 - `描述` 应包含其外观、用途或背景故事。 示例 1: `[道具:生锈的铁钥匙]一把看起来很古老的铁钥匙，上面刻着模糊的纹路，似乎可以打开某个锁。[/道具]` 示例 2: `[道具:卓越的铁剑|攻击力:8|锋利度:高]这是一柄由矮人大师打造的利剑，剑刃上闪烁着寒光。[/道具]` 3. **地图/区域**: 当玩家进入一个重要的新区域或发现地图信息时使用。 格式: `[地图:区域名称]...区域的描述或连接关系...[/地图]` 示例: `[地图:古代图书馆]这里是学院的禁区，高耸的书架直抵天花板，空气中弥漫着旧纸张的香气。北边有一扇紧锁的门。[/地图]` 4. **板块/模块**: 用于触发特殊的游戏机制，如战斗、解谜、属性检定等。 格式: `[板块:板块类型]...相关信息...[/板块]` - `板块类型` 可以是 `战斗`, `解谜`, `检定` 等。 示例 1 (战斗): `[板块:战斗]一只饥饿的洞穴哥布林从阴影中跳出，手持淬毒的匕首向你扑来！[/板块]` 示例 2 (检定): `[板块:检定]你需要进行一次敏捷检定来跳过这个陷阱。[/板块]` **一个完整的回复示例:** `[剧情]你小心翼翼地走过吊桥，进入了城堡的主厅。大厅中央的篝火早已熄灭，只剩下灰烬。你注意到角落里有一个沉重的木箱。[/剧情][板块:检定]你需要进行一次力量检定来尝试打开这个箱子。[/板块]` 现在，游戏开始。玩家的第一个行动是：
+        </template>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- DOM 元素获取 ---
+        const docBody = document.body;
+        const gameContainer = document.getElementById('game-container');
+        const gameLog = document.getElementById('game-log');
+        const hpBar = document.getElementById('hp-bar');
+        const hpText = document.getElementById('hp-text');
+        const mpBar = document.getElementById('mp-bar');
+        const mpText = document.getElementById('mp-text');
+        const strVal = document.getElementById('str-val');
+        const dexVal = document.getElementById('dex-val');
+        const intVal = document.getElementById('int-val');
+        const inventoryList = document.getElementById('inventory-list');
+        const areaList = document.getElementById('area-list');
+        const commandInput = document.getElementById('command-input');
+        const sendButton = document.getElementById('send-button');
+        const settingsButton = document.getElementById('settings-button');
+        const themeToggleButton = document.getElementById('theme-toggle-button');
+        const regenerateButton = document.getElementById('regenerate-button');
+        const notificationToast = document.getElementById('notification-toast');
+        
+        // 模态框DOM
+        const settingsModal = document.getElementById('settings-modal');
+        const closeSettingsButton = document.getElementById('close-settings-button');
+        const itemDetailsModal = document.getElementById('item-details-modal');
+        const itemDetailsName = document.getElementById('item-details-name');
+        const itemDetailsAttributes = document.getElementById('item-details-attributes');
+        const itemDetailsDescription = document.getElementById('item-details-description');
+        const areaDetailsModal = document.getElementById('area-details-modal');
+        const areaDetailsName = document.getElementById('area-details-name');
+        const areaDetailsDescription = document.getElementById('area-details-description');
+        const newGameButton = document.getElementById('new-game-button');
+        const regenerateConfirmModal = document.getElementById('regenerate-confirm-modal');
+        const regenerateConfirmButton = document.getElementById('regenerate-confirm-button');
+        const regenerateCancelButton = document.getElementById('regenerate-cancel-button');
+        const dontAskRegenerateCheckbox = document.getElementById('dont-ask-regenerate-checkbox');
+
+        // 设置表单DOM
+        const configSelect = document.getElementById('config-select');
+        const configNewButton = document.getElementById('config-new-button');
+        const configSaveButton = document.getElementById('config-save-button');
+        const configDeleteButton = document.getElementById('config-delete-button');
+        const configNameInput = document.getElementById('config-name-input');
+        const aiUrlInput = document.getElementById('ai-url');
+        const aiUrlLabel = document.getElementById('ai-url-label');
+        const customUrlCheckbox = document.getElementById('custom-url-checkbox');
+        const aiKeyInput = document.getElementById('ai-key');
+        const aiModelSelect = document.getElementById('ai-model');
+        const aiModelCustomInput = document.getElementById('ai-model-custom');
+        const fetchModelsButton = document.getElementById('fetch-models-button');
+        const modelFetchStatus = document.getElementById('model-fetch-status');
+
+        // 页签DOM
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const infoPanelContents = document.querySelectorAll('.info-panel-content');
+
+        // --- 游戏状态 ---
+        let gameState = {
+            player: { hp: 100, maxHp: 100, mp: 50, maxMp: 50, str: 10, dex: 10, int: 10, inventory: {} },
+            world: { maps: {}, modules: {} },
+            apiConfigs: [],
+            activeConfigIndex: -1,
+            theme: 'dark',
+            history: [],
+            preferences: {
+                confirmRegenerate: true,
+            }
+        };
+
+        const THEMES = ['dark', 'light', 'iris-purple', 'grass-green'];
+
+        // --- 正则表达式 ---
+        const REGEX = {
+            STORY: /\[剧情\]([\s\S]*?)\[\/剧情\]/g,
+            ITEM: /\[道具:([^\]]+)\]([\s\S]*?)\[\/道具\]/g,
+            MAP: /\[地图:([^\]]+)\]([\s\S]*?)\[\/地图\]/g,
+            MODULE: /\[板块:([^\]]+)\]([\s\S]*?)\[\/板块\]/g,
+        };
+
+        // --- 渲染与UI函数 ---
+        function showNotification(message, type = 'success') {
+            notificationToast.textContent = message;
+            notificationToast.className = type;
+            notificationToast.classList.add('show');
+            setTimeout(() => {
+                notificationToast.classList.remove('show');
+            }, 3000);
+        }
+
+        function renderStats() {
+            const p = gameState.player;
+            hpBar.style.width = `${(p.hp / p.maxHp) * 100}%`;
+            hpText.textContent = `${p.hp} / ${p.maxHp}`;
+            mpBar.style.width = `${(p.mp / p.maxMp) * 100}%`;
+            mpText.textContent = `${p.mp} / ${p.maxMp}`;
+            strVal.textContent = p.str;
+            dexVal.textContent = p.dex;
+            intVal.textContent = p.int;
+        }
+
+        function renderInventory() {
+            inventoryList.innerHTML = '';
+            for (const key in gameState.player.inventory) {
+                const item = gameState.player.inventory[key];
+                const itemEl = document.createElement('div');
+                itemEl.className = 'info-tag';
+                itemEl.textContent = item.name;
+                
+                let pressTimer;
+                let isLongPress = false;
+
+                const startPress = (e) => {
+                    e.preventDefault();
+                    isLongPress = false;
+                    pressTimer = setTimeout(() => {
+                        isLongPress = true;
+                        itemDetailsName.textContent = item.name;
+                        itemDetailsAttributes.innerHTML = '';
+                        if (Object.keys(item.attributes).length > 0) {
+                            for(const attr in item.attributes) {
+                                const attrEl = document.createElement('span');
+                                attrEl.innerHTML = `<strong>${attr}:</strong> ${item.attributes[attr]}`;
+                                itemDetailsAttributes.appendChild(attrEl);
+                            }
+                            itemDetailsAttributes.style.display = 'block';
+                        } else {
+                            itemDetailsAttributes.style.display = 'none';
+                        }
+                        itemDetailsDescription.innerHTML = DOMPurify.sanitize(marked.parse(item.description || '*没有更多描述了...*'));
+                        itemDetailsModal.style.display = 'flex';
+                    }, 400);
+                };
+
+                const endPress = (e) => {
+                    clearTimeout(pressTimer);
+                    if (!isLongPress) {
+                        handleCommand(`使用 ${item.name}`);
+                    }
+                };
+
+                itemEl.addEventListener('mousedown', startPress);
+                itemEl.addEventListener('touchstart', startPress, { passive: false });
+                itemEl.addEventListener('mouseup', endPress);
+                itemEl.addEventListener('touchend', endPress);
+                itemEl.addEventListener('mouseleave', () => clearTimeout(pressTimer));
+
+                inventoryList.appendChild(itemEl);
+            }
+        }
+
+        function renderDiscoveredAreas() {
+            areaList.innerHTML = '';
+            for (const areaName in gameState.world.maps) {
+                const area = gameState.world.maps[areaName];
+                const areaEl = document.createElement('div');
+                areaEl.className = 'info-tag area-tag';
+                areaEl.textContent = areaName;
+                areaEl.addEventListener('click', () => {
+                    areaDetailsName.textContent = areaName;
+                    areaDetailsDescription.innerHTML = DOMPurify.sanitize(marked.parse(area.description || '*没有关于这个区域的更多信息...*'));
+                    areaDetailsModal.style.display = 'flex';
+                });
+                areaList.appendChild(areaEl);
+            }
+        }
+
+        function addLogEntry(text, type = 'story') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            const rawHtml = marked.parse(text.replace(/\n/g, '<br>'));
+            entry.innerHTML = DOMPurify.sanitize(rawHtml);
+            gameLog.appendChild(entry);
+            gameLog.scrollTop = gameLog.scrollHeight;
+        }
+
+        // --- 主题管理 ---
+        function applyTheme(themeName) {
+            docBody.className = '';
+            docBody.classList.add(`theme-${themeName}`);
+            gameState.theme = themeName;
+        }
+
+        function toggleTheme() {
+            const currentIndex = THEMES.indexOf(gameState.theme);
+            const nextIndex = (currentIndex + 1) % THEMES.length;
+            const nextTheme = THEMES[nextIndex];
+            applyTheme(nextTheme);
+            localStorage.setItem('ai-rpg-theme', nextTheme);
+        }
+
+        function initTheme() {
+            const savedTheme = localStorage.getItem('ai-rpg-theme');
+            if (savedTheme && THEMES.includes(savedTheme)) {
+                applyTheme(savedTheme);
+            } else {
+                const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
+                applyTheme(prefersLight ? 'light' : 'dark');
+            }
+        }
+
+        // --- 页签管理 ---
+        function switchTab(tabName) {
+            tabButtons.forEach(button => {
+                button.classList.toggle('active', button.dataset.tab === tabName);
+            });
+            infoPanelContents.forEach(panel => {
+                panel.classList.toggle('active', panel.id === `${tabName}-panel`);
+            });
+        }
+
+        // --- URL 处理工具 ---
+        function getBaseUrl(url) {
+            if (!url) return '';
+            let baseUrl = url.trim().replace(/\/$/, '');
+            const v1Index = baseUrl.indexOf('/v1');
+            if (v1Index > -1) {
+                baseUrl = baseUrl.substring(0, v1Index);
+            }
+            return baseUrl;
+        }
+
+        // --- AI 与内容解析 ---
+        async function callAI(prompt) {
+            if (gameState.activeConfigIndex === -1 || gameState.apiConfigs.length === 0) {
+                addLogEntry('错误: 没有活动的AI配置。请在设置中选择或创建一个配置。', 'error');
+                settingsModal.style.display = 'flex';
+                return;
+            }
+            const activeConfig = gameState.apiConfigs[gameState.activeConfigIndex];
+            if (!activeConfig.url) {
+                addLogEntry('错误: 当前AI配置的URL为空。', 'error');
+                settingsModal.style.display = 'flex';
+                return;
+            }
+            const chatUrl = activeConfig.isCustomUrl ? activeConfig.url : `${getBaseUrl(activeConfig.url)}/v1/chat/completions`;
+            addLogEntry('AI 正在思考', 'system log-ai-thinking');
+            const systemPrompt = document.getElementById('prompt-main').innerHTML.trim();
+            const model = activeConfig.model;
+            const messages = [{ role: 'system', content: systemPrompt }, ...gameState.history, { role: 'user', content: prompt }];
+            const headers = { 'Content-Type': 'application/json' };
+            if (activeConfig.key) {
+                headers['Authorization'] = `Bearer ${activeConfig.key}`;
+            }
+            try {
+                const response = await fetch(chatUrl, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ model: model, messages: messages })
+                });
+                const thinkingEntry = gameLog.querySelector('.log-ai-thinking');
+                if (thinkingEntry) thinkingEntry.remove();
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`API 请求失败: ${response.status} ${response.statusText}\n${JSON.stringify(errorData)}`);
+                }
+                const data = await response.json();
+                const aiResponse = data.choices[0].message.content;
+                gameState.history.push({ role: 'assistant', content: aiResponse });
+                parseAIResponse(aiResponse);
+            } catch (error) {
+                console.error('AI call failed:', error);
+                addLogEntry(`AI 连接错误: ${error.message}`, 'error');
+                const thinkingEntry = gameLog.querySelector('.log-ai-thinking');
+                if (thinkingEntry) thinkingEntry.remove();
+            }
+        }
+        
+        function parseAIResponse(text) {
+            let remainingText = text;
+            function extractAndProcess(regex, type, handler) {
+                remainingText = remainingText.replace(regex, (match, ...args) => {
+                    handler(type, ...args);
+                    return '';
+                });
+            }
+            extractAndProcess(REGEX.STORY, 'story', (type, content) => {
+                addLogEntry(content.trim(), type);
+            });
+            extractAndProcess(REGEX.ITEM, 'item', (type, header, description) => {
+                const parts = header.split('|').map(p => p.trim());
+                const itemName = parts[0];
+                const attributes = {};
+                if (parts.length > 1) {
+                    for (let i = 1; i < parts.length; i++) {
+                        const [key, value] = parts[i].split(':').map(s => s.trim());
+                        if (key && value) {
+                            attributes[key] = value;
+                        }
+                    }
+                }
+                gameState.player.inventory[itemName] = { name: itemName, attributes: attributes, description: description.trim() };
+                addLogEntry(`你获得了 **${itemName}**。`, 'item');
+                renderInventory();
+            });
+            extractAndProcess(REGEX.MAP, 'map', (type, name, description) => {
+                gameState.world.maps[name.trim()] = { description: description.trim() };
+                addLogEntry(`你发现了新区域: **${name.trim()}**`, type);
+                renderDiscoveredAreas();
+            });
+            extractAndProcess(REGEX.MODULE, 'module', (type, name, content) => {
+                gameState.world.modules[name.trim()] = { content: content.trim() };
+                addLogEntry(`触发板块 [${name.trim()}]: ${content.trim()}`, type);
+            });
+            if (remainingText.trim()) {
+                addLogEntry(remainingText.trim(), 'story');
+            }
+            regenerateButton.disabled = false;
+            saveGameState();
+        }
+
+        // --- 事件处理 ---
+        function handleCommand(commandText) {
+            const command = commandText.trim();
+            if (!command) return;
+            addLogEntry(`> ${command}`, 'player');
+            gameState.history.push({ role: 'user', content: command });
+            commandInput.value = '';
+            callAI(command);
+        }
+
+        function performRegeneration() {
+            // 1. 移除上一条AI历史记录
+            gameState.history.pop();
+
+            // 2. 移除日志中上一条AI的回复
+            const allLogs = gameLog.querySelectorAll('.log-entry');
+            let lastPlayerLogIndex = -1;
+            allLogs.forEach((log, index) => {
+                if (log.classList.contains('log-player')) {
+                    lastPlayerLogIndex = index;
+                }
+            });
+            if (lastPlayerLogIndex !== -1) {
+                for (let i = allLogs.length - 1; i > lastPlayerLogIndex; i--) {
+                    allLogs[i].remove();
+                }
+            }
+
+            // 3. 使用更上一条的用户输入重新调用AI
+            const lastUserPrompt = gameState.history[gameState.history.length - 1].content;
+            callAI(lastUserPrompt);
+        }
+
+        function handleRegenerateClick() {
+            if (gameState.history.length < 2 || gameState.history[gameState.history.length - 1].role !== 'assistant') {
+                showNotification('没有可重新生成的内容。', 'error');
+                return;
+            }
+
+            if (gameState.preferences.confirmRegenerate) {
+                regenerateConfirmModal.style.display = 'flex';
+            } else {
+                performRegeneration();
+            }
+        }
+        
+        // --- 游戏存档管理 ---
+        function saveGameState() {
+            const dataToSave = {
+                gameState: gameState,
+                logHTML: gameLog.innerHTML
+            };
+            localStorage.setItem('ai-rpg-gameState', JSON.stringify(dataToSave));
+        }
+
+        function loadGameState() {
+            try {
+                const savedDataString = localStorage.getItem('ai-rpg-gameState');
+                if (savedDataString) {
+                    const savedData = JSON.parse(savedDataString);
+                    // 合并状态，确保新旧存档兼容
+                    gameState.player = { ...gameState.player, ...savedData.gameState.player };
+                    gameState.world = { ...gameState.world, ...savedData.gameState.world };
+                    gameState.history = savedData.gameState.history || [];
+                    gameState.preferences = { ...gameState.preferences, ...savedData.gameState.preferences };
+                    
+                    gameLog.innerHTML = savedData.logHTML;
+                    gameLog.scrollTop = gameLog.scrollHeight;
+                    return true;
+                }
+            } catch (error) {
+                console.error("加载游戏存档失败，将开启新游戏:", error);
+                localStorage.removeItem('ai-rpg-gameState');
+                showNotification('存档损坏，已开启新游戏。', 'error');
+            }
+            return false;
+        }
+
+        function handleNewGame() {
+            if (confirm('确定要清除所有进度并开启新游戏吗？此操作不可撤销。')) {
+                localStorage.removeItem('ai-rpg-gameState');
+                location.reload();
+            }
+        }
+
+        // --- 设置与API配置管理 ---
+        function loadApiConfigs() {
+            try {
+                const savedData = JSON.parse(localStorage.getItem('ai-rpg-configs') || '{}');
+                gameState.apiConfigs = Array.isArray(savedData.configs) ? savedData.configs : [];
+                gameState.activeConfigIndex = savedData.activeIndex === undefined ? -1 : savedData.activeIndex;
+                if (gameState.apiConfigs.length > 0 && (gameState.activeConfigIndex < 0 || gameState.activeConfigIndex >= gameState.apiConfigs.length)) {
+                    gameState.activeConfigIndex = 0;
+                }
+            } catch (error) {
+                console.error("加载API配置失败，将重置:", error);
+                gameState.apiConfigs = [];
+                gameState.activeConfigIndex = -1;
+                localStorage.removeItem('ai-rpg-configs');
+            }
+        }
+
+        function saveApiConfigs() {
+            const dataToSave = { configs: gameState.apiConfigs, activeIndex: gameState.activeConfigIndex };
+            localStorage.setItem('ai-rpg-configs', JSON.stringify(dataToSave));
+        }
+
+        function populateConfigSelector() {
+            configSelect.innerHTML = '';
+            if (gameState.apiConfigs.length === 0) {
+                configSelect.innerHTML = '<option value="-1">无配置,请新建</option>';
+                return;
+            }
+            gameState.apiConfigs.forEach((config, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = config.name;
+                configSelect.appendChild(option);
+            });
+            configSelect.value = gameState.activeConfigIndex;
+        }
+
+        function displayConfigDetails(index) {
+            if (index < 0 || index >= gameState.apiConfigs.length) {
+                configNameInput.value = '';
+                aiUrlInput.value = '';
+                aiKeyInput.value = '';
+                customUrlCheckbox.checked = false;
+                aiModelSelect.innerHTML = '';
+                aiModelCustomInput.value = '';
+                updateUrlInputMode();
+                return;
+            }
+            const config = gameState.apiConfigs[index];
+            configNameInput.value = config.name;
+            aiUrlInput.value = config.url;
+            aiKeyInput.value = config.key;
+            customUrlCheckbox.checked = config.isCustomUrl || false;
+            aiModelCustomInput.value = '';
+            if (config.model) {
+                aiModelSelect.innerHTML = `<option value="${config.model}">${config.model}</option>`;
+                aiModelSelect.value = config.model;
+            } else {
+                aiModelSelect.innerHTML = '';
+            }
+            updateUrlInputMode();
+        }
+
+        function handleConfigSelectChange() {
+            const selectedIndex = parseInt(configSelect.value, 10);
+            if (selectedIndex >= 0) {
+                gameState.activeConfigIndex = selectedIndex;
+                displayConfigDetails(selectedIndex);
+            }
+        }
+
+        function handleNewConfig() {
+            gameState.activeConfigIndex = -1;
+            configSelect.value = '-1';
+            displayConfigDetails(-1);
+            configNameInput.focus();
+        }
+
+        function handleSaveConfig() {
+            const name = configNameInput.value.trim();
+            if (!name) {
+                showNotification('配置名称不能为空！', 'error');
+                return;
+            }
+            const configData = {
+                name: name,
+                url: aiUrlInput.value.trim(),
+                key: aiKeyInput.value.trim(),
+                isCustomUrl: customUrlCheckbox.checked,
+                model: aiModelCustomInput.value.trim() || aiModelSelect.value
+            };
+            
+            if (gameState.activeConfigIndex === -1) {
+                gameState.apiConfigs.push(configData);
+                gameState.activeConfigIndex = gameState.apiConfigs.length - 1;
+            } else {
+                gameState.apiConfigs[gameState.activeConfigIndex] = configData;
+            }
+            
+            saveApiConfigs();
+            populateConfigSelector();
+            showNotification(`配置 "${name}" 已保存！`);
+        }
+
+        function handleDeleteConfig() {
+            const selectedIndex = parseInt(configSelect.value, 10);
+            if (selectedIndex < 0 || isNaN(selectedIndex)) {
+                showNotification('没有可删除的配置。', 'error');
+                return;
+            }
+            const configName = gameState.apiConfigs[selectedIndex].name;
+            
+            showNotification(`已删除配置 "${configName}"`);
+            gameState.apiConfigs.splice(selectedIndex, 1);
+            gameState.activeConfigIndex = gameState.apiConfigs.length > 0 ? 0 : -1;
+            saveApiConfigs();
+            populateConfigSelector();
+            displayConfigDetails(gameState.activeConfigIndex);
+        }
+
+        function updateUrlInputMode() {
+            if (customUrlCheckbox.checked) {
+                aiUrlLabel.textContent = "API 完整 URL";
+                fetchModelsButton.disabled = true;
+            } else {
+                aiUrlLabel.textContent = "API 基础 URL (自动补全 /v1/... 后缀)";
+                fetchModelsButton.disabled = false;
+            }
+        }
+
+        async function fetchModels() {
+            const index = gameState.activeConfigIndex;
+            if (index === -1) {
+                modelFetchStatus.textContent = '请先选择或保存一个配置。';
+                modelFetchStatus.style.color = 'var(--error-color)';
+                return;
+            }
+            const activeConfig = gameState.apiConfigs[index];
+            const baseUrl = getBaseUrl(activeConfig.url);
+            const key = activeConfig.key;
+            if (!baseUrl) {
+                modelFetchStatus.textContent = '当前配置的URL不能为空。';
+                modelFetchStatus.style.color = 'var(--error-color)';
+                return;
+            }
+            modelFetchStatus.textContent = '正在获取...';
+            modelFetchStatus.style.color = 'var(--secondary-text-color)';
+            aiModelSelect.innerHTML = '<option>...</option>';
+            
+            const headers = {};
+            if (key) {
+                headers['Authorization'] = `Bearer ${key}`;
+            }
+
+            try {
+                const modelsUrl = `${baseUrl}/v1/models`;
+                const response = await fetch(modelsUrl, { headers: headers });
+                if (!response.ok) throw new Error(`API请求失败: ${response.status}`);
+                const data = await response.json();
+                const models = data.data || [];
+                aiModelSelect.innerHTML = '';
+                if (models.length === 0) {
+                    aiModelSelect.innerHTML = '<option>未能获取</option>';
+                    throw new Error('模型列表为空');
+                }
+                const chatModelKeywords = ['gpt', 'claude', 'gemini', 'qwen', 'glm'];
+                models.map(m => m.id).filter(id => chatModelKeywords.some(kw => id.toLowerCase().includes(kw))).sort().forEach(modelId => {
+                    const option = document.createElement('option');
+                    option.value = modelId;
+                    option.textContent = modelId;
+                    aiModelSelect.appendChild(option);
+                });
+                if (activeConfig.model) {
+                    aiModelSelect.value = activeConfig.model;
+                }
+                modelFetchStatus.textContent = `成功获取 ${aiModelSelect.options.length} 个模型！`;
+                modelFetchStatus.style.color = 'var(--success-color)';
+            } catch (error) {
+                console.error('Fetch models failed:', error);
+                modelFetchStatus.textContent = `获取失败: ${error.message}`;
+                modelFetchStatus.style.color = 'var(--error-color)';
+                aiModelSelect.innerHTML = `<option value="gpt-4o">gpt-4o (默认)</option>`;
+            }
+        }
+
+        // --- 初始化 ---
+        function init() {
+            loadApiConfigs();
+            const gameLoaded = loadGameState();
+            
+            initTheme();
+            renderStats();
+            renderInventory();
+            renderDiscoveredAreas();
+            
+            // 绑定所有事件监听器
+            sendButton.addEventListener('click', () => handleCommand(commandInput.value));
+            commandInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleCommand(commandInput.value); });
+            themeToggleButton.addEventListener('click', toggleTheme);
+            regenerateButton.addEventListener('click', handleRegenerateClick);
+            settingsButton.addEventListener('click', () => {
+                settingsModal.style.display = 'flex';
+                populateConfigSelector();
+                displayConfigDetails(gameState.activeConfigIndex);
+                modelFetchStatus.textContent = '';
+            });
+            closeSettingsButton.addEventListener('click', () => settingsModal.style.display = 'none');
+            
+            // 通用模态框关闭逻辑
+            [itemDetailsModal, areaDetailsModal, regenerateConfirmModal].forEach(modal => {
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.style.display = 'none';
+                    }
+                });
+            });
+
+            // 重生成确认弹窗按钮
+            regenerateCancelButton.addEventListener('click', () => regenerateConfirmModal.style.display = 'none');
+            regenerateConfirmButton.addEventListener('click', () => {
+                if (dontAskRegenerateCheckbox.checked) {
+                    gameState.preferences.confirmRegenerate = false;
+                }
+                performRegeneration();
+                regenerateConfirmModal.style.display = 'none';
+            });
+
+            newGameButton.addEventListener('click', handleNewGame);
+            configSelect.addEventListener('change', handleConfigSelectChange);
+            configNewButton.addEventListener('click', handleNewConfig);
+            configSaveButton.addEventListener('click', handleSaveConfig);
+            configDeleteButton.addEventListener('click', handleDeleteConfig);
+            customUrlCheckbox.addEventListener('change', updateUrlInputMode);
+            fetchModelsButton.addEventListener('click', fetchModels);
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    switchTab(button.dataset.tab);
+                });
+            });
+
+            // 智能界面调整
+            if ('ResizeObserver' in window) {
+                const observer = new ResizeObserver(entries => {
+                    for (let entry of entries) {
+                        gameLog.scrollTop = gameLog.scrollHeight;
+                    }
+                });
+                observer.observe(document.body);
+            }
+
+            if (!gameLoaded) {
+                addLogEntry('欢迎来到 AI 驱动的文字冒险游戏！输入任何内容开始你的旅程...', 'system');
+                if (gameState.apiConfigs.length === 0) {
+                    addLogEntry('请点击右下角的 <i class="fas fa-cog"></i> 按钮创建并配置你的 AI 服务。', 'system');
+                    settingsModal.style.display = 'flex';
+                    populateConfigSelector();
+                    displayConfigDetails(-1);
+                }
+            }
+            
+            regenerateButton.disabled = gameState.history.length < 2;
+            switchTab('inventory');
+        }
+
+        init();
+    });
+    </script>
+
+</body>
+</html>
